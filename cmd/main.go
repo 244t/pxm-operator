@@ -41,4 +41,19 @@ func main() {
             float64(node.MaxMem)/1024/1024/1024)
         fmt.Println()
     }
+
+    fmt.Println("Fetching  all VMs...")
+    allVMs, err := client.GetAllVMs()
+    if err != nil {
+        log.Fatalf("Error: %v", err)
+    }
+    fmt.Printf("Found %d VM(s):\n", len(allVMs))
+    for _, vm := range allVMs {
+       fmt.Printf("- VM: %s (ID: %d)\n", vm.Name, vm.VMID)
+       fmt.Printf("  Node: %s\n", vm.Node)
+       fmt.Printf("  Status: %s\n", vm.Status)
+       fmt.Printf("  CPU: %.2f%% (%d cores)\n", vm.CPU*100, vm.CPUs)
+       fmt.Printf("  Memory: %.2f GB / %.2f GB\n",float64(vm.Mem)/1024/1024/1024,float64(vm.MaxMem)/1024/1024/1024)
+       fmt.Println()
+    }
 }
