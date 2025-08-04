@@ -42,6 +42,11 @@ type VMsResponse struct {
 	Data []VM `json:"data"`
 }
 
+type MigrationResponse struct {
+    AllowedNodes []string `json:"allowed_nodes"`
+    Running int `json:"running"`
+}
+
 func NewClient(baseURL, token string) *Client {
 	return &Client{
 		BaseURL: baseURL,
@@ -142,4 +147,34 @@ func (c *Client) GetAllVMs() ([]VM, error) {
 	}
 
 	return allVMs, nil
+}
+
+func (c *Client) GetMigrationTargets(vmid int, sourceNode string) ([]string, error) {
+    url := fmt.Sprintf("%s/api2/json/nodes/%s/qemu/%d/migrate", c.BaseURL, sourceNode, vmid)
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("PVEAPIToken=%s", c.Token))
+
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var migrationResp MigrationResponse
+	err = json.Unmarshal(body, &migrationResp)
+	if err != nil {
+		return nil, err
+	}
+
+	return migrationResp.AllowedNodes, nil
 }
