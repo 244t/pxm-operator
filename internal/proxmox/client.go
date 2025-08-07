@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"bytes"
 )
 
 type Client struct {
@@ -32,6 +33,13 @@ type VM struct {
 	Mem    int64   `json:"mem"`
 	MaxMem int64   `json:"maxmem"`
 	Node   string
+}
+
+type Migration struct {
+	VMID int `json:"vmid"`
+	Name string `json:"name"`
+	SourceNode string `json:"source_node"`
+	TargetNode string `json:"target_node"`
 }
 
 type NodesResponse struct {
@@ -177,4 +185,50 @@ func (c *Client) GetMigrationTargets(vmid int, sourceNode string) ([]string, err
 	}
 
 	return migrationResp.AllowedNodes, nil
+}
+
+func (c *Client) ExecuteMigration (m Migration) error {
+	url := fmt.Sprintf(
+		"%s/api2/json/nodes/%s/qemu/%d/migrate",
+        c.BaseURL, m.SourceNode, m.VMID,
+	)
+
+	 // Body用の構造体
+    body := struct {
+        Target string `json:"target"`
+        Online bool   `json:"online"`
+    }{
+        Target: m.TargetNode,
+        Online: true, // Live Migration
+    }
+
+	jsonData, err := json.Marshal(body)
+    if err != nil {
+        return err
+    }
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+    if err != nil {
+        return err
+    }
+    
+    req.Header.Set("Authorization", fmt.Sprintf("PVEAPIToken=%s", c.Token))
+    req.Header.Set("Content-Type", "application/json")
+    
+    resp, err := c.HTTPClient.Do(req)
+    if err != nil {
+        return err
+    }
+    defer resp.Body.Close()
+    
+    if resp.StatusCode != 200 {
+        body, _ := io.ReadAll(resp.Body)
+        return fmt.Errorf("migration failed: status %d, response: %s", 
+            resp.StatusCode, string(body))
+    }
+    
+    fmt.Printf("Migration started: VM%d %s → %s\n", 
+        m.VMID, m.SourceNode, m.TargetNode)
+    
+    return nil
 }
