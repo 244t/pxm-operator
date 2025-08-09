@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"pxm-operator/internal/proxmox"
+	"pxm-operator/internal/monitor"
 
 	"github.com/joho/godotenv"
 )
@@ -63,5 +64,17 @@ func main() {
 		log.Printf("Error getting migration targets: %v", err)
 	} else {
 		fmt.Printf("Migration targets for VM100: %v\n", targets)
+	}
+
+
+	m := monitor.NewMemoryMonitor(client, 0.9)
+	highMemoryNodes, err := m.CheckMemoryPressure()
+	if err != nil {
+		log.Printf("Error check memory pressure: %v", err)
+	}
+	if len(highMemoryNodes) > 0{
+		fmt.Printf("High memory nodes: %v\n", highMemoryNodes)
+	} else {
+		fmt.Printf("All nodes have sufficient memory\n")
 	}
 }
