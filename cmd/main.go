@@ -7,6 +7,7 @@ import (
 
 	"pxm-operator/internal/proxmox"
 	"pxm-operator/internal/monitor"
+	"pxm-operator/internal/qmp"
 
 	"github.com/joho/godotenv"
 )
@@ -77,4 +78,35 @@ func main() {
 	} else {
 		fmt.Printf("All nodes have sufficient memory\n")
 	}
+
+	fmt.Println("QMP Dirty Rate Test")
+    fmt.Println("=====================")
+    
+    // QMP接続
+    fmt.Println("Connecting to QMP...")
+    qmpClient, err := qmp.NewQMPClient("192.168.1.100", 4444)
+    if err != nil {
+        log.Fatalf("Failed to connect to QMP: %v", err)
+    }
+    defer qmpClient.Close()
+    
+    fmt.Println("✅ QMP connection established!")
+    
+    // Dirty Rate測定
+    fmt.Println("📊 Measuring Dirty Rate (10 seconds)...")
+    result, err := qmpClient.GetDirtyRate(10)
+    if err != nil {
+        log.Fatalf("Failed to get dirty rate: %v", err)
+    }
+    
+    // 結果表示
+    fmt.Println("✅ Measurement completed!")
+    fmt.Printf("📈 Results:\n")
+    fmt.Printf("   Status: %s\n", result.Status)
+    fmt.Printf("   Dirty Rate: %.2f MB/s\n", result.DirtyRate)
+    fmt.Printf("   Calc Time: %d %s\n", result.CalcTime, result.CalcTimeUnit)
+    fmt.Printf("   Mode: %s\n", result.Mode)
+    fmt.Printf("   Sample Pages: %d\n", result.SamplePages)
+    
+    fmt.Println("🎉 Test completed successfully!")
 }
